@@ -140,10 +140,10 @@ class S3Test extends ObjectStoreTest {
 		$s3->deleteObject('emptystream');
 	}
 
-	/** File size to upload in kb */
+	/** File size to upload in bytes */
 	public function dataFileSizes() {
 		return [
-			[1000], [2000], [4999], [5000], [10000]
+			[1000000], [2000000], [5242879], [5242880], [5242881], [10000000]
 		];
 	}
 
@@ -153,8 +153,12 @@ class S3Test extends ObjectStoreTest {
 		$s3 = $this->getInstance();
 
 		$sourceStream = fopen('php://memory', 'wb+');
-		for ($i=0; $i<$size; $i++) {
-			fwrite($sourceStream, str_repeat('A', 1024));
+		$writeChunkSize = 1024;
+		$chunkCount = $size/$writeChunkSize;
+		for ($i=0; $i<$chunkCount; $i++) {
+			fwrite($sourceStream, str_repeat('A',
+				($i < $chunkCount-1) ? $writeChunkSize : $size-($i*$writeChunkSize)
+			));
 		}
 		rewind($sourceStream);
 		$s3->writeObject('testfilesizes', $sourceStream);
@@ -168,11 +172,11 @@ class S3Test extends ObjectStoreTest {
 		self::assertEquals(str_repeat('A', 100), fread($result, 100));
 
 		// compare 100 bytes
-		fseek($result, $size*1024-100);
+		fseek($result, $size-100);
 		self::assertEquals(str_repeat('A', 100), fread($result, 100));
 
 		// end of file reached
-		fseek($result, $size*1024);
+		fseek($result, $size);
 		self:self::assertTrue(feof($result));
 
 		$this->assertNoUpload('testfilesizes');
