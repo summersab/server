@@ -87,10 +87,7 @@ class User implements IUser {
 	/** @var IAvatarManager */
 	private $avatarManager;
 
-	/** @var IURLGenerator */
-	private $urlGenerator;
-
-	public function __construct(string $uid, ?UserInterface $backend, EventDispatcherInterface $dispatcher, $emitter = null, IConfig $config = null, $urlGenerator = null) {
+	public function __construct(string $uid, ?UserInterface $backend, EventDispatcherInterface $dispatcher, $emitter = null, IConfig $config = null) {
 		$this->uid = $uid;
 		$this->backend = $backend;
 		$this->legacyDispatcher = $dispatcher;
@@ -99,13 +96,9 @@ class User implements IUser {
 			$config = \OC::$server->getConfig();
 		}
 		$this->config = $config;
-		$this->urlGenerator = $urlGenerator;
 		$enabled = $this->config->getUserValue($uid, 'core', 'enabled', 'true');
 		$this->enabled = ($enabled === 'true');
 		$this->lastLogin = $this->config->getUserValue($uid, 'login', 'lastLogin', 0);
-		if (is_null($this->urlGenerator)) {
-			$this->urlGenerator = \OC::$server->getURLGenerator();
-		}
 		// TODO: inject
 		$this->dispatcher = \OC::$server->query(IEventDispatcher::class);
 	}
@@ -463,24 +456,7 @@ class User implements IUser {
 	 * @since 9.0.0
 	 */
 	public function getCloudId() {
-		$uid = $this->getUID();
-		$server = $this->urlGenerator->getAbsoluteURL('/');
-		$server = rtrim($this->removeProtocolFromUrl($server), '/');
-		return \OC::$server->getCloudIdManager()->getCloudId($uid, $server)->getId();
-	}
-
-	/**
-	 * @param string $url
-	 * @return string
-	 */
-	private function removeProtocolFromUrl($url) {
-		if (strpos($url, 'https://') === 0) {
-			return substr($url, strlen('https://'));
-		} elseif (strpos($url, 'http://') === 0) {
-			return substr($url, strlen('http://'));
-		}
-
-		return $url;
+		return \OC::$server->getCloudIdManager()->getCloudId($this->getUID())->getId();
 	}
 
 	public function triggerChange($feature, $value = null, $oldValue = null) {

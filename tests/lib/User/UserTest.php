@@ -10,11 +10,17 @@
 namespace Test\User;
 
 use OC\AllConfig;
+use OC\Federation\CloudIdManager;
 use OC\Hooks\PublicEmitter;
+use OC\URLGenerator;
 use OC\User\User;
 use OCP\Comments\ICommentsManager;
+use OCP\Contacts\IManager;
+use OCP\Federation\ICloudIdManager;
 use OCP\IConfig;
+use OCP\IURLGenerator;
 use OCP\IUser;
+use OCP\IUserManager;
 use OCP\Notification\IManager as INotificationManager;
 use OCP\Notification\INotification;
 use OCP\UserInterface;
@@ -580,16 +586,20 @@ class UserTest extends TestCase {
 		 * @var Backend | \PHPUnit\Framework\MockObject\MockObject $backend
 		 */
 		$backend = $this->createMock(\Test\Util\User\Dummy::class);
-		$urlGenerator = $this->getMockBuilder('\OC\URLGenerator')
-				->setMethods(['getAbsoluteURL'])
-				->disableOriginalConstructor()->getMock();
+		$urlGenerator = $this->createMock(IURLGenerator::class);
 		$urlGenerator
-				->expects($this->any())
+				->expects(self::any())
 				->method('getAbsoluteURL')
 				->withAnyParameters()
 				->willReturn('http://localhost:8888/owncloud');
-		$user = new User('foo', $backend, $this->dispatcher, null, null, $urlGenerator);
-		$this->assertEquals('foo@localhost:8888/owncloud', $user->getCloudId());
+		$cloudIdManager = new CloudIdManager(
+			$this->createMock(IManager::class),
+			$urlGenerator,
+			$this->createMock(IUserManager::class),
+		);
+		$this->overwriteService(ICloudIdManager::class, $cloudIdManager);
+		$user = new User('foo', $backend, $this->dispatcher, null, null);
+		self::assertEquals('foo@localhost:8888/owncloud', $user->getCloudId());
 	}
 
 	public function testSetEMailAddressEmpty() {
